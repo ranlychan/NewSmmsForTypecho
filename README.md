@@ -1,4 +1,6 @@
-# NewSmmsForTypecho
+# NewSmmsForTypecho ![Typecho Version Support](https://img.shields.io/badge/Typecho-v1.1%20(17.10.30)%20tested-brightgreen) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/ranlychan/NewSmmsForTypecho) ![GitHub all releases](https://img.shields.io/github/downloads/ranlychan/NewSmmsForTypecho/total) 
+
+![插件的设置界面](https://s2.loli.net/2023/03/03/cJw1gfAmdoVEaWP.png)
 
 ## 为什么开发
 - 由于smms的图床最近针对大陆设置了专门的访问域名smms.app（真的良心厂商），原来的sm.ms似乎不太可用了。
