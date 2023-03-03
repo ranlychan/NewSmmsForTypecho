@@ -1,5 +1,7 @@
 # NewSmmsForTypecho
 
+![插件的设置界面](https://s2.loli.net/2023/03/03/cJw1gfAmdoVEaWP.png)
+
 ## 为什么开发
 - 由于smms的图床最近针对大陆设置了专门的访问域名smms.app（真的良心厂商），原来的sm.ms似乎不太可用了。
 - [SmmsForTypecho](https://github.com/gogobody/SmmsForTypecho) 的插件似乎没有在维护了，bug也多，所以就没有去拉仓库改了，而是自己拉代码大改一下。
