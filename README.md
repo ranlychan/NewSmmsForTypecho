@@ -12,3 +12,5 @@
 
 ## 有什么后续计划
 这是一个Typecho插件的开发试验，用于学习和探索Typecho插件开发流程与技巧，了解Typecho程序与数据结构的小项目。后续将基于这些学习，开发一款针对Typecho的图片功能做出若干优化的插件。欢迎关注，详细请见我的博文[https://ranlychan.top/archives/538.html](https://ranlychan.top/archives/538.html)
+
+> 博文地址：https://ranlychan.top/archives/552.html
