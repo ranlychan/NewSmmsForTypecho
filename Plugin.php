@@ -67,6 +67,13 @@ class NewSmmsForTypecho_Plugin extends Widget_Upload implements Typecho_Plugin_I
         );
 		$form->addInput($smmsToken->addRule('required',_t('您必须填写API Token'))
 		->addRule(array('NewSmmsForTypecho_Plugin', 'validate'), _t('验证不通过，请核对API Token是否正确')));
+
+        $smmsUploadExts = new Typecho_Widget_Helper_Form_Element_Text('smmsUploadExts', NULL,
+            'jpg,jpge,png,gif,svg,webp,tiff,bmp',
+            _t('自定义上传拓展名：'),
+            _t('自定义需要上传到smms图床的图片的拓展名，不在此列的将上传本地而不是图床。文件拓展名间请以英文半角逗号\',\'间隔')
+        );
+        $form->addInput($smmsUploadExts->addRule('required',_t('您必须填写自定义上传拓展名')));
     }
     
     /**
@@ -659,7 +666,17 @@ class NewSmmsForTypecho_Plugin extends Widget_Upload implements Typecho_Plugin_I
      * @return boolean
      */
     public static function isImgType($ext){
-        return in_array(strtolower($ext), array('jpg','jpge','png','gif','svg','webp','tiff','bmp'));
+        try {
+            $options =  Typecho_Widget::widget('Widget_Options')->plugin('NewSmmsForTypecho');
+            $smmsUploadExtsArr = explode(',',strtolower($options->smmsUploadExts));
+            return in_array(strtolower($ext), $smmsUploadExtsArr);
+        } catch (Exception $e) {
+            try {
+                return in_array(strtolower($ext), array('jpg','jpge','png','gif','svg','webp','tiff','bmp'));
+            } catch (Exception $e) {
+                return false;
+            }
+        }
     }
 
     /**
