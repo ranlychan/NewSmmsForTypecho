@@ -12,7 +12,7 @@
 
 include_once 'smms.class.php';
 
-class NewSmmsForTypecho_Plugin implements Typecho_Plugin_Interface
+class NewSmmsForTypecho_Plugin extends Widget_Upload implements Typecho_Plugin_Interface
 {
 	//上传文件目录
 	const UPLOAD_DIR = '/usr/uploads' ;
@@ -92,14 +92,9 @@ class NewSmmsForTypecho_Plugin implements Typecho_Plugin_Interface
             return false;
         }
 
-        $result = Typecho_Plugin::factory('Widget_Upload')->trigger($hasUploaded)->uploadHandle($file);
-        if ($hasUploaded) {
-            return $result;
-        }
-
         // 获取扩展名并检查
         $ext = self::getSafeName($file['name']);
-        if (!Widget_Upload::checkFileType($ext) || Typecho_Common::isAppEngine()) {
+        if (!self::checkFileType($ext) || Typecho_Common::isAppEngine()) {
             return false;
         }
 
@@ -136,7 +131,7 @@ class NewSmmsForTypecho_Plugin implements Typecho_Plugin_Interface
             }
         } else {
             // 上传到本地
-            return Widget_Upload::uploadHandle($file);
+            return self::pUploadHandle($file);
         }
     }
 
@@ -155,7 +150,7 @@ class NewSmmsForTypecho_Plugin implements Typecho_Plugin_Interface
                 return self::uploadHandle($file);
             case "loc":   // 本机存储
             default:      // 默认也为本机存储的处理方式以兼容旧的数据
-                return Widget_Upload::modifyHandle($content, $file);
+                return self::pModifyHandle($content, $file);
         }
 
     }
@@ -171,11 +166,6 @@ class NewSmmsForTypecho_Plugin implements Typecho_Plugin_Interface
     {
         switch ($content['attachment']->source){
             case "smms":  // smms图床存储
-                $result = Typecho_Plugin::factory('Widget_Upload')->trigger($hasDeleted)->deleteHandle($content);
-                if ($hasDeleted) {
-                    return $result;
-                }
-
                 try {
                     $smms = self::smmsInit();
                     $hash = $content['attachment']->hash;
@@ -185,7 +175,7 @@ class NewSmmsForTypecho_Plugin implements Typecho_Plugin_Interface
                 }
             case "loc":   // 本机存储
             default:      // 默认也为本机存储的处理方式以兼容旧的数据
-                return Widget_Upload::deleteHandle($content);
+                return self::pDeleteHandle($content);
         }
 
     }
@@ -202,14 +192,10 @@ class NewSmmsForTypecho_Plugin implements Typecho_Plugin_Interface
         // 根据attachment的存储位置(本地还是图床等)来获取绝对路径
         switch ($content['attachment']->source){
             case "smms":  // smms图床存储
-                $result = Typecho_Plugin::factory('Widget_Upload')->trigger($hasPlugged)->attachmentHandle($content);
-                if ($hasPlugged) {
-                    return $result;
-                }
                 return $content['attachment']->url;
             case "loc":   // 本机存储
             default:      // 默认也为本机存储的处理方式以兼容旧的数据
-                return Widget_Upload::attachmentHandle($content);
+                return self::pAttachmentHandle($content);
         }
     }
 
@@ -224,15 +210,10 @@ class NewSmmsForTypecho_Plugin implements Typecho_Plugin_Interface
     {
         switch ($content['attachment']->source){
             case "smms":  // smms图床存储
-                $result = Typecho_Plugin::factory('Widget_Upload')->trigger($hasPlugged)->attachmentDataHandle($content);
-                if ($hasPlugged) {
-                    return $result;
-                }
-
                 return file_get_contents($content['attachment']->url);
             case "loc":   // 本机存储
             default:      // 默认也为本机存储的处理方式以兼容旧的数据
-                return Widget_Upload::attachmentDataHandle($content);
+                return self::pAttachmentDataHandle($content);
         }
     }
 
@@ -680,4 +661,209 @@ class NewSmmsForTypecho_Plugin implements Typecho_Plugin_Interface
     public static function isImgType($ext){
         return in_array(strtolower($ext), array('jpg','jpge','png','gif','svg','webp','tiff','bmp'));
     }
+
+    /**
+     * 上传文件处理函数,如果需要实现自己的文件哈希或者特殊的文件系统,请在options表里把uploadHandle改成自己的函数
+     *
+     * @access public
+     * @param array $file 上传的文件
+     * @return mixed
+     */
+    public static function pUploadHandle($file)
+    {
+        if (empty($file['name'])) {
+            return false;
+        }
+
+        $ext = self::getSafeName($file['name']);
+
+        if (!self::checkFileType($ext) || Typecho_Common::isAppEngine()) {
+            return false;
+        }
+
+        $date = new Typecho_Date();
+        $path = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
+                defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__)
+            . '/' . $date->year . '/' . $date->month;
+
+        //创建上传目录
+        if (!is_dir($path)) {
+            if (!self::makeUploadDir($path)) {
+                return false;
+            }
+        }
+
+        //获取文件名
+        $fileName = sprintf('%u', crc32(uniqid())) . '.' . $ext;
+        $path = $path . '/' . $fileName;
+
+        if (isset($file['tmp_name'])) {
+
+            //移动上传文件
+            if (!@move_uploaded_file($file['tmp_name'], $path)) {
+                return false;
+            }
+        } else if (isset($file['bytes'])) {
+
+            //直接写入文件
+            if (!file_put_contents($path, $file['bytes'])) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        if (!isset($file['size'])) {
+            $file['size'] = filesize($path);
+        }
+
+        //返回相对存储路径
+        return array(
+            'name' => $file['name'],
+            'path' => (defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR)
+                . '/' . $date->year . '/' . $date->month . '/' . $fileName,
+            'size' => $file['size'],
+            'type' => $ext,
+            'mime' => Typecho_Common::mimeContentType($path)
+        );
+    }
+
+    /**
+     * 修改文件处理函数,如果需要实现自己的文件哈希或者特殊的文件系统,请在options表里把modifyHandle改成自己的函数
+     *
+     * @access public
+     * @param array $content 老文件
+     * @param array $file 新上传的文件
+     * @return mixed
+     */
+    public static function pModifyHandle($content, $file)
+    {
+        if (empty($file['name'])) {
+            return false;
+        }
+
+        $ext = self::getSafeName($file['name']);
+
+        if ($content['attachment']->type != $ext || Typecho_Common::isAppEngine()) {
+            return false;
+        }
+
+        $path = Typecho_Common::url($content['attachment']->path,
+            defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
+        $dir = dirname($path);
+
+        //创建上传目录
+        if (!is_dir($dir)) {
+            if (!self::makeUploadDir($dir)) {
+                return false;
+            }
+        }
+
+        if (isset($file['tmp_name'])) {
+
+            @unlink($path);
+
+            //移动上传文件
+            if (!@move_uploaded_file($file['tmp_name'], $path)) {
+                return false;
+            }
+        } else if (isset($file['bytes'])) {
+
+            @unlink($path);
+
+            //直接写入文件
+            if (!file_put_contents($path, $file['bytes'])) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        if (!isset($file['size'])) {
+            $file['size'] = filesize($path);
+        }
+
+        //返回相对存储路径
+        return array(
+            'name' => $content['attachment']->name,
+            'path' => $content['attachment']->path,
+            'size' => $file['size'],
+            'type' => $content['attachment']->type,
+            'mime' => $content['attachment']->mime
+        );
+    }
+
+    /**
+     * 删除文件
+     *
+     * @access public
+     * @param array $content 文件相关信息
+     * @return string
+     */
+    public static function pDeleteHandle(array $content)
+    {
+        return !Typecho_Common::isAppEngine()
+            && @unlink(__TYPECHO_ROOT_DIR__ . '/' . $content['attachment']->path);
+    }
+
+    /**
+     * 获取实际文件绝对访问路径
+     *
+     * @access public
+     * @param array $content 文件相关信息
+     * @return string
+     */
+    public static function pAttachmentHandle(array $content)
+    {
+        $options = Typecho_Widget::widget('Widget_Options');
+        return Typecho_Common::url($content['attachment']->path,
+            defined('__TYPECHO_UPLOAD_URL__') ? __TYPECHO_UPLOAD_URL__ : $options->siteUrl);
+    }
+
+    /**
+     * 获取实际文件数据
+     *
+     * @access public
+     * @param array $content
+     * @return string
+     */
+    public static function pAttachmentDataHandle(array $content)
+    {
+        return file_get_contents(Typecho_Common::url($content['attachment']->path,
+            defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__));
+    }
+
+    /**
+     * 创建上传路径
+     *
+     * @access protected
+     * @param string $path 路径
+     * @return boolean
+     */
+    protected static function makeUploadDir($path)
+    {
+        $path = preg_replace("/\\\+/", '/', $path);
+        $current = rtrim($path, '/');
+        $last = $current;
+
+        while (!is_dir($current) && false !== strpos($path, '/')) {
+            $last = $current;
+            $current = dirname($current);
+        }
+
+        if ($last == $current) {
+            return true;
+        }
+
+        if (!@mkdir($last)) {
+            return false;
+        }
+
+        $stat = @stat($last);
+        $perms = $stat['mode'] & 0007777;
+        @chmod($last, $perms);
+
+        return self::makeUploadDir($path);
+    }
+
 }
