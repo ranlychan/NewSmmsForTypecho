@@ -4,7 +4,7 @@
  * 
  * @package NewSmms
  * @author ranlychan
- * @version 1.0.0
+ * @version 1.0.1
  * @link https://www.ranlychan.com
  * @dependence 1.0-*
  * @date 2023-3-1
