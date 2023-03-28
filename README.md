@@ -2,6 +2,10 @@
 
 ![插件的设置界面](https://s2.loli.net/2023/03/03/mQkKr8Mc7guZG3I.png)
 
+## 注意
+- 目前插件的release版本v1.0.1只在Typecho v1.1(17.10.30)上测试通过
+- 插件的release版本v1.0.1暂时不支持Typecho v1.2
+
 ## 为什么开发
 - 由于smms的图床最近针对大陆设置了专门的访问域名smms.app（真的良心厂商），原来的sm.ms似乎不太可用了。
 - [SmmsForTypecho](https://github.com/gogobody/SmmsForTypecho) 的插件似乎没有在维护了，bug也多，所以就没有去拉仓库改了，而是自己拉代码大改一下。
